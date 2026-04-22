@@ -1,31 +1,129 @@
-<!-- título que aparece en pestaña del navegador -->
-<title>English Tutor</title>
+<!DOCTYPE html>
+<html>
 
-<!-- título visible en la página -->
-<h1>English Tutor</h1>
+<head>
 
-<!-- formulario para enviar texto -->
-<form method="POST">
+    <!-- codificación -->
+    <meta charset="UTF-8">
 
-    <!-- caja donde usuario escribe -->
-    <input type="text" name="mensaje" placeholder="Write in English">
+    <!-- adapta móvil -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- botón enviar -->
-    <button type="submit">Send</button>
+    <!-- título pestaña -->
+    <title>English Tutor</title>
 
-</form>
+    <style>
 
-<!-- si existe respuesta, mostrarla -->
-<p>{{ respuesta }}</p>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 40px;
+        }
 
-<h2>Chat History</h2>
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
 
-{% for linea in historial %}
+        h1 {
+            text-align: center;
+            color: #222;
+        }
 
-<div style="margin:10px; padding:10px; border:1px solid gray; border-radius:8px;">
+        form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
 
-    {{ linea }}
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
 
-</div>
+        button {
+            padding: 12px 18px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
 
-{% endfor %}
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .respuesta {
+            background: #eef6ff;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .chat-box {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background: #f8f8f8;
+            border: 1px solid #e2e2e2;
+        }
+
+        h2 {
+            margin-top: 30px;
+            color: #333;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>English Tutor</h1>
+
+        <form method="POST">
+
+            <input
+                type="text"
+                name="mensaje"
+                placeholder="Write in English"
+                required
+                autofocus
+            >
+
+            <button type="submit">Send</button>
+
+        </form>
+
+        {% if respuesta %}
+            <div class="respuesta">
+                {{ respuesta }}
+            </div>
+        {% endif %}
+
+        <h2>Chat History</h2>
+
+        {% for linea in historial %}
+
+            <div class="chat-box">
+                {{ linea }}
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+</body>
+</html>
