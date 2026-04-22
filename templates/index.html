@@ -1,0 +1,31 @@
+<!-- título que aparece en pestaña del navegador -->
+<title>English Tutor</title>
+
+<!-- título visible en la página -->
+<h1>English Tutor</h1>
+
+<!-- formulario para enviar texto -->
+<form method="POST">
+
+    <!-- caja donde usuario escribe -->
+    <input type="text" name="mensaje" placeholder="Write in English">
+
+    <!-- botón enviar -->
+    <button type="submit">Send</button>
+
+</form>
+
+<!-- si existe respuesta, mostrarla -->
+<p>{{ respuesta }}</p>
+
+<h2>Chat History</h2>
+
+{% for linea in historial %}
+
+<div style="margin:10px; padding:10px; border:1px solid gray; border-radius:8px;">
+
+    {{ linea }}
+
+</div>
+
+{% endfor %}
