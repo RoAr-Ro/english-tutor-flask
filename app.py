@@ -3,6 +3,10 @@ from verbos import verbos
 from flask import Flask, request, render_template
 import json
 import os
+from grammar.detector import detectar_tiempo
+from grammar.past import corregir_pasado
+from grammar.present import corregir_presente
+from grammar.future import corregir_futuro
 
 # crea la aplicación
 app = Flask(__name__)
@@ -48,57 +52,58 @@ def formatear_frase(texto):
 
     return texto
 
-# función que corrige frases
+
+# función principal que coordina todo
 def corregir_frase(mensaje):
 
-    # convierte texto a minúsculas
-    mensaje = mensaje.lower()
-    
-    # quita espacios al inicio y al final de la frase
-    mensaje = mensaje.strip()
+    # normalizar texto
+    mensaje = mensaje.lower().strip()
 
-    # verifica si el mensaje está vacío
+    # caso vacío
     if mensaje == "":
         return "Please write a sentence."
 
-    # si escribió yesterday
-    if "yesterday" in mensaje:
-
-        # revisar verbos
-        for presente, pasado in verbos.items():
-
-            if presente in mensaje:
-
-                # separar frase en palabras
-                palabras = mensaje.split()
-
-                # recorrer posiciones
-                for i in range(len(palabras)):
-
-                    # si palabra exacta coincide
-                    if palabras[i] == presente:
-                        palabras[i] = pasado
-
-                # unir frase
-
-                frase_corregida = " ".join(palabras)
-
-                frase_corregida = formatear_frase(frase_corregida)
-
-                return f"Corrected: {frase_corregida}"
-
-        return "Sentence in past detected."
-
-    elif mensaje == "hello":
+    # respuestas especiales (se mantienen)
+    if mensaje == "hello":
         return "Hello! How are you?"
 
-    elif mensaje == "i am fine":
+    if mensaje == "i am fine":
         return "Good sentence!"
 
-    else:
-        mensaje = formatear_frase(mensaje)
+    # detectar tipo de tiempo
+    tiempo = detectar_tiempo(mensaje)
 
-        return f"You wrote: {mensaje}"
+    # lógica por tipo
+    if tiempo == "past":
+
+        resultado, explicacion = corregir_pasado(mensaje)
+
+        # si no cambió nada → no encontró verbo
+        if resultado == mensaje:
+            return "Sentence in past detected."
+
+    elif tiempo == "future":
+        resultado, explicacion = corregir_futuro(mensaje)
+
+    else:
+        resultado, explicacion = corregir_presente(mensaje)
+
+    # formatear salida
+    resultado_formateado = formatear_frase(resultado)
+    mensaje_formateado = formatear_frase(mensaje)
+
+    # si no hubo cambios
+    if resultado_formateado == mensaje_formateado:
+        return f"You wrote: {resultado_formateado}"
+
+    # si sí hubo corrección
+    if resultado_formateado == mensaje_formateado:
+        return f"You wrote: {resultado_formateado}"
+
+    if explicacion:
+        return f"Corrected: {resultado_formateado}\nExplanation: {explicacion}"
+
+    return f"Corrected: {resultado_formateado}"
 
 # ruta principal
 # acepta GET (abrir página) y POST (enviar formulario)

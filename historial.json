@@ -1,12 +1,12 @@
 [
-    "You: hi",
-    "Tutor: You wrote: Hi.",
+    "You: he go",
+    "Tutor: Corrected: He goes.\nExplanation: 'he' requiere verbo terminado en 'es'.",
+    "You: i go tomorrow",
+    "Tutor: Corrected: I will go tomorrow.",
     "You: i go yesterday",
     "Tutor: Corrected: I went yesterday.",
-    "You: hello",
-    "Tutor: Hello! How are you?",
-    "You: hi",
-    "Tutor: You wrote: Hi.",
-    "You: i yesterday",
-    "Tutor: Sentence in past detected."
+    "You: i am go",
+    "Tutor: You wrote: I am go.",
+    "You: i go",
+    "Tutor: You wrote: I go."
 ]

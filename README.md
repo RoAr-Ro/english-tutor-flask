@@ -66,7 +66,7 @@ pip install flask pytest
 
 ---
 
-## Run the Project
+## Run Locally
 
 python app.py
 

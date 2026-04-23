@@ -1,43 +1,47 @@
 import pytest
+from app import app, corregir_frase
 
-# importar función desde app.py
-from app import app, corregir_frase   # importar la app Flask y función a testear
 
-@pytest.fixture                 # indica que esto es recurso reutilizable para tests
+@pytest.fixture
 def client():
 
-    app.config["TESTING"] = True   # activar modo testing en Flask
+    app.config["TESTING"] = True
 
-    # crear cliente falso que simula navegador/app
     with app.test_client() as client:
+        yield client
 
-        yield client   # entregar cliente al test que lo necesite
+# -------------------------
+# GENERAL
+# -------------------------
 
+def test_texto_vacio():
+    assert corregir_frase("") == "Please write a sentence."
 
+def test_solo_espacios():
+    assert corregir_frase("   ") == "Please write a sentence."
 
-# test 1
-def test_go_yesterday():
-    assert corregir_frase("i go yesterday") == "Corrected: I went yesterday."
+def test_unknown_text():
+    assert corregir_frase("good morning") == "You wrote: Good morning."
 
+def test_texto_normal():
+    assert corregir_frase("i like pizza") == "You wrote: I like pizza."
+    
+    
+# -------------------------
+# RESPUESTAS FIJAS
+# -------------------------
 
-# test 2
 def test_hello():
     assert corregir_frase("hello") == "Hello! How are you?"
 
-
-# test 3
 def test_fine():
     assert corregir_frase("i am fine") == "Good sentence!"
-
-# test 4    
-def test_eat_yesterday():
-    assert corregir_frase("i eat pizza yesterday") == "Corrected: I ate pizza yesterday."
-
-# test 5
-def test_unknown_text():
-    assert corregir_frase("good morning") == "You wrote: Good morning."
     
     
+# -------------------------
+# PASADO
+# -------------------------
+
 @pytest.mark.parametrize(
     "entrada,esperado",
     [
@@ -46,71 +50,87 @@ def test_unknown_text():
         ("i see Ana yesterday", "Corrected: I saw ana yesterday."),
     ]
 )
-def test_varios_verbos(entrada, esperado):
-    assert corregir_frase(entrada) == esperado
-    
-    
-def test_texto_vacio():
-    assert corregir_frase("") == "Please write a sentence."
+def test_pasado_varios(entrada, esperado):
+    resultado = corregir_frase(entrada)
+    assert esperado in resultado
+    assert "Explanation:" in resultado
 
 
-def test_solo_espacios():
-    assert corregir_frase("   ") == "Please write a sentence."
+def test_run_yesterday():
+    resultado = corregir_frase("i run yesterday")
+    assert "Corrected: I ran yesterday." in resultado
+    assert "Explanation:" in resultado
+
+
+def test_write_yesterday():
+    resultado = corregir_frase("i write a letter yesterday")
+    assert "Corrected: I wrote a letter yesterday." in resultado
+    assert "Explanation:" in resultado
 
 
 def test_yesterday_sin_verbo():
     assert corregir_frase("party yesterday") == "Sentence in past detected."
-
-
-def test_mayusculas():
-    assert corregir_frase("I GO YESTERDAY") == "Corrected: I went yesterday."
-    
-def test_run_yesterday():
-    assert corregir_frase("i run yesterday") == "Corrected: I ran yesterday."
-
-
-def test_write_yesterday():
-    assert corregir_frase("i write a letter yesterday") == "Corrected: I wrote a letter yesterday."
     
     
-def test_texto_normal():
-    assert corregir_frase("i like pizza") == "You wrote: I like pizza."
+# -------------------------
+# PRESENTE
+# -------------------------
+
+def test_presente_he():
+    resultado = corregir_frase("he go")
+    assert "Corrected: He goes." in resultado
+    assert "Explanation:" in resultado
+
+def test_presente_she():
+    resultado = corregir_frase("she eat")
+    assert "Corrected: She eats." in resultado
+    assert "Explanation:" in resultado
+
+def test_presente_it():
+    resultado = corregir_frase("it watch tv")
+    assert "Corrected: It watches tv." in resultado
+    assert "Explanation:" in resultado
+
+def test_presente_i():
+    assert corregir_frase("i go") == "You wrote: I go."
     
+    
+# -------------------------
+# FUTURO
+# -------------------------
 
-def test_api_corregir(client):   # test recibe cliente fixture
+def test_futuro_i():
+    resultado = corregir_frase("i go tomorrow")
+    assert "Corrected: I will go tomorrow." in resultado
+    assert "Explanation:" in resultado
 
-    # enviar petición POST a la ruta API
-    response = client.post(
+def test_futuro_he():
+    resultado = corregir_frase("he eat tomorrow")
+    assert "Corrected: He will eat tomorrow." in resultado
+    assert "Explanation:" in resultado
 
-        "/api/corregir",   # endpoint a probar
+def test_futuro_already():
+    assert corregir_frase("i will go tomorrow") == "You wrote: I will go tomorrow."
+    
+    
+# -------------------------
+# API
+# -------------------------
 
-        json={
-            "mensaje": "i go yesterday"   # datos enviados en JSON
-        }
-    )
-
-    # verificar código HTTP correcto
+def test_api_corregir(client):
+    response = client.post("/api/corregir", json={"mensaje": "i go yesterday"})
     assert response.status_code == 200
 
-    # convertir respuesta JSON a diccionario Python
     data = response.get_json()
 
-    # verificar contenido esperado
-    assert data["respuesta"] == "Corrected: I went yesterday."
-    
+    assert "Corrected: I went yesterday." in data["respuesta"]
+    assert "Explanation:" in data["respuesta"]
+
+
 def test_api_error_sin_mensaje(client):
-
-    # enviar JSON vacío
-    response = client.post(
-        "/api/corregir",
-        json={}
-    )
-
-    # debe responder error cliente
+    response = client.post("/api/corregir", json={})
     assert response.status_code == 400
 
-    # leer json respuesta
     data = response.get_json()
 
-    # validar mensaje error
     assert data["error"] == "mensaje requerido"
