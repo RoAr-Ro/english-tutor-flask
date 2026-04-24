@@ -1,5 +1,6 @@
+# venv\Scripts\python.exe app.py
 # importa Flask, render_template y request
-from verbos import verbos
+from verbos import VERBOS_IRREGULARES
 from flask import Flask, request, render_template
 import json
 import os
@@ -61,14 +62,14 @@ def corregir_frase(mensaje):
 
     # caso vacío
     if mensaje == "":
-        return "Please write a sentence."
+        return "Please write a sentence.", None
 
     # respuestas especiales (se mantienen)
     if mensaje == "hello":
-        return "Hello! How are you?"
+        return "Hello! How are you?", None
 
     if mensaje == "i am fine":
-        return "Good sentence!"
+        return "Good sentence!", None
 
     # detectar tipo de tiempo
     tiempo = detectar_tiempo(mensaje)
@@ -80,7 +81,7 @@ def corregir_frase(mensaje):
 
         # si no cambió nada → no encontró verbo
         if resultado == mensaje:
-            return "Sentence in past detected."
+            return "Sentence in past detected.", None
 
     elif tiempo == "future":
         resultado, explicacion = corregir_futuro(mensaje)
@@ -92,47 +93,56 @@ def corregir_frase(mensaje):
     resultado_formateado = formatear_frase(resultado)
     mensaje_formateado = formatear_frase(mensaje)
 
-    # si no hubo cambios
+    
     if resultado_formateado == mensaje_formateado:
-        return f"You wrote: {resultado_formateado}"
-
-    # si sí hubo corrección
-    if resultado_formateado == mensaje_formateado:
-        return f"You wrote: {resultado_formateado}"
+        return resultado_formateado, explicacion
 
     if explicacion:
-        return f"Corrected: {resultado_formateado}\nExplanation: {explicacion}"
+        return resultado_formateado, explicacion
 
-    return f"Corrected: {resultado_formateado}"
+    if resultado_formateado == mensaje_formateado:
+        return resultado_formateado, None
 
-# ruta principal
-# acepta GET (abrir página) y POST (enviar formulario)
+    return resultado_formateado, explicacion
+
+# ruta principal de la aplicación
 @app.route("/", methods=["GET", "POST"])
 def home():
 
-    # variable vacía al inicio
+    # inicializa la variable explicacion para evitar errores si no hay POST
+    explicacion = None
+
+    # inicializa la respuesta vacía para evitar variable no definida
     respuesta = ""
 
-    # si el usuario envió formulario
+    # verifica si el usuario envió el formulario (método POST)
     if request.method == "POST":
 
-        # obtener texto escrito por usuario
+        # obtiene el texto que el usuario escribió en el input llamado "mensaje"
         mensaje = request.form["mensaje"]
 
-        # llamar función correctora
-        respuesta = corregir_frase(mensaje)
+        # llama a la función que corrige la frase y devuelve texto + explicación
+        respuesta, explicacion = corregir_frase(mensaje)
 
-        # guardar historial
+        # agrega al historial lo que escribió el usuario
         historial.append(f"You: {mensaje}")
+
+        # agrega al historial la respuesta del tutor
         historial.append(f"Tutor: {respuesta}")
         
-        # conservar solo últimas 10 entradas
+        # limpia el historial para que solo tenga las últimas 10 entradas
         limpiar_historial(historial)
         
+        # guarda el historial en almacenamiento (archivo o memoria persistente)
         guardar_historial(historial)
 
-        # enviar historial al HTML
-    return render_template("index.html", respuesta=respuesta, historial=historial)
+    # renderiza la plantilla HTML enviando respuesta, explicación e historial
+    return render_template(
+        "index.html",
+        respuesta=respuesta,
+        explicacion=explicacion,
+        historial=historial
+    )
 
 
 @app.route("/api/corregir", methods=["POST"])
@@ -153,11 +163,12 @@ def api_corregir():
     mensaje = data["mensaje"]
 
     # usar lógica existente
-    respuesta = corregir_frase(mensaje)
+    texto, explicacion = corregir_frase(mensaje)
 
     # devolver respuesta correcta
     return {
-        "respuesta": respuesta
+        "respuesta": texto,
+        "explicacion": explicacion
     }
 
 

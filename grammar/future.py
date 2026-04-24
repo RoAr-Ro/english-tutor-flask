@@ -1,20 +1,29 @@
-from verbos import verbos
+from verbos import VERBOS_IRREGULARES, VERBOS_BASE
 
 def corregir_futuro(mensaje):
 
+    # separar palabras
     palabras = mensaje.split()
 
+    # si ya tiene "will"
     if "will" in palabras:
-        return mensaje, None
+        return mensaje, "La frase ya está en futuro."
 
     nueva_frase = []
     cambio = False
 
-    for palabra in palabras:
+    # recorrer con índice
+    for i, palabra in enumerate(palabras):
 
-        if palabra in verbos:
+        if i == 1:
             nueva_frase.append("will")
-            nueva_frase.append(palabra)
+
+            # si el verbo está en pasado irregular → convertir a base
+            if palabra in VERBOS_BASE:
+                nueva_frase.append(VERBOS_BASE[palabra])
+            else:
+                nueva_frase.append(palabra)
+
             cambio = True
 
         else:
@@ -23,7 +32,14 @@ def corregir_futuro(mensaje):
     resultado = " ".join(nueva_frase)
 
     if cambio:
-        explicacion = "Se detectó futuro (tomorrow) y se añadió 'will'."
+
+        # explicación base
+        explicacion = "Se detectó futuro y se añadió 'will'."
+
+        # si se corrigió verbo de pasado a base
+        if any(p in VERBOS_BASE for p in palabras):
+            explicacion += " Además, se corrigió el verbo a su forma base."
+
         return resultado, explicacion
 
     return mensaje, None

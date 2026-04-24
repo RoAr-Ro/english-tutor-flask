@@ -109,7 +109,13 @@
 
         {% if respuesta %}
             <div class="respuesta">
-                {{ respuesta }}
+                <strong>Corrected:</strong> {{ respuesta }}
+            </div>
+        {% endif %}
+
+        {% if explicacion %}
+            <div class="respuesta">
+                <strong>Explanation:</strong> {{ explicacion }}
             </div>
         {% endif %}
 
