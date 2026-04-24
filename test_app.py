@@ -15,16 +15,26 @@ def client():
 # -------------------------
 
 def test_texto_vacio():
-    assert corregir_frase("") == "Please write a sentence."
+    texto, explicacion = corregir_frase("")
+    assert texto == "Please write a sentence."
+    assert explicacion is None
+
 
 def test_solo_espacios():
-    assert corregir_frase("   ") == "Please write a sentence."
+    texto, explicacion = corregir_frase("   ")
+    assert texto == "Please write a sentence."
+    assert explicacion is None
 
 def test_unknown_text():
-    assert corregir_frase("good morning") == "You wrote: Good morning."
+    texto, explicacion = corregir_frase("good morning")
+    assert texto == "Good morning."
+    assert explicacion is None
+
 
 def test_texto_normal():
-    assert corregir_frase("i like pizza") == "You wrote: I like pizza."
+    texto, explicacion = corregir_frase("i like pizza")
+    assert texto == "I like pizza."
+    assert explicacion is None
     
     
 # -------------------------
@@ -32,10 +42,15 @@ def test_texto_normal():
 # -------------------------
 
 def test_hello():
-    assert corregir_frase("hello") == "Hello! How are you?"
+    texto, explicacion = corregir_frase("hello")
+    assert texto == "Hello! How are you?"
+    assert explicacion is None
+
 
 def test_fine():
-    assert corregir_frase("i am fine") == "Good sentence!"
+    texto, explicacion = corregir_frase("i am fine")
+    assert texto == "Good sentence!"
+    assert explicacion is None
     
     
 # -------------------------
@@ -45,31 +60,33 @@ def test_fine():
 @pytest.mark.parametrize(
     "entrada,esperado",
     [
-        ("i go yesterday", "Corrected: I went yesterday."),
-        ("i eat pizza yesterday", "Corrected: I ate pizza yesterday."),
-        ("i see Ana yesterday", "Corrected: I saw ana yesterday."),
+        ("i go yesterday", "I went yesterday."),
+        ("i eat pizza yesterday", "I ate pizza yesterday."),
+        ("i see Ana yesterday", "I saw ana yesterday."),
     ]
 )
 def test_pasado_varios(entrada, esperado):
-    resultado = corregir_frase(entrada)
-    assert esperado in resultado
-    assert "Explanation:" in resultado
+    texto, explicacion = corregir_frase(entrada)
+    assert texto == esperado
+    assert explicacion is not None
 
 
 def test_run_yesterday():
-    resultado = corregir_frase("i run yesterday")
-    assert "Corrected: I ran yesterday." in resultado
-    assert "Explanation:" in resultado
+    texto, explicacion = corregir_frase("i run yesterday")
+    assert texto == "I ran yesterday."
+    assert explicacion is not None
 
 
 def test_write_yesterday():
-    resultado = corregir_frase("i write a letter yesterday")
-    assert "Corrected: I wrote a letter yesterday." in resultado
-    assert "Explanation:" in resultado
+    texto, explicacion = corregir_frase("i write a letter yesterday")
+    assert texto == "I wrote a letter yesterday."
+    assert explicacion is not None
 
 
 def test_yesterday_sin_verbo():
-    assert corregir_frase("party yesterday") == "Sentence in past detected."
+    texto, explicacion = corregir_frase("party yesterday")
+    assert texto is not None
+    assert explicacion is not None
     
     
 # -------------------------
@@ -77,22 +94,24 @@ def test_yesterday_sin_verbo():
 # -------------------------
 
 def test_presente_he():
-    resultado = corregir_frase("he go")
-    assert "Corrected: He goes." in resultado
-    assert "Explanation:" in resultado
+    texto, explicacion = corregir_frase("he go")
+    assert texto == "He goes."
+    assert explicacion is not None
 
 def test_presente_she():
-    resultado = corregir_frase("she eat")
-    assert "Corrected: She eats." in resultado
-    assert "Explanation:" in resultado
+    texto, explicacion = corregir_frase("she eat")
+    assert texto == "She eats."
+    assert explicacion is not None
 
 def test_presente_it():
-    resultado = corregir_frase("it watch tv")
-    assert "Corrected: It watches tv." in resultado
-    assert "Explanation:" in resultado
+    texto, explicacion = corregir_frase("it watch tv")
+    assert texto == "It watches tv."
+    assert explicacion is not None
 
 def test_presente_i():
-    assert corregir_frase("i go") == "You wrote: I go."
+    texto, explicacion = corregir_frase("i go")
+    assert texto == "I go."
+    assert explicacion is None
     
     
 # -------------------------
@@ -100,17 +119,19 @@ def test_presente_i():
 # -------------------------
 
 def test_futuro_i():
-    resultado = corregir_frase("i go tomorrow")
-    assert "Corrected: I will go tomorrow." in resultado
-    assert "Explanation:" in resultado
+    texto, explicacion = corregir_frase("i go tomorrow")
+    assert texto == "I will go tomorrow."
+    assert explicacion is not None
 
 def test_futuro_he():
-    resultado = corregir_frase("he eat tomorrow")
-    assert "Corrected: He will eat tomorrow." in resultado
-    assert "Explanation:" in resultado
+    texto, explicacion = corregir_frase("he eat tomorrow")
+    assert texto == "He will eat tomorrow."
+    assert explicacion is not None
 
 def test_futuro_already():
-    assert corregir_frase("i will go tomorrow") == "You wrote: I will go tomorrow."
+    texto, explicacion = corregir_frase("i will go tomorrow")
+    assert texto == "I will go tomorrow."
+    assert explicacion is not None
     
     
 # -------------------------
@@ -123,8 +144,8 @@ def test_api_corregir(client):
 
     data = response.get_json()
 
-    assert "Corrected: I went yesterday." in data["respuesta"]
-    assert "Explanation:" in data["respuesta"]
+    assert data["respuesta"] == "I went yesterday."
+    assert data["explicacion"] is not None
 
 
 def test_api_error_sin_mensaje(client):

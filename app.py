@@ -64,24 +64,19 @@ def corregir_frase(mensaje):
     if mensaje == "":
         return "Please write a sentence.", None
 
-    # respuestas especiales (se mantienen)
+    # respuestas especiales
     if mensaje == "hello":
         return "Hello! How are you?", None
 
     if mensaje == "i am fine":
         return "Good sentence!", None
 
-    # detectar tipo de tiempo
+    # detectar tiempo
     tiempo = detectar_tiempo(mensaje)
 
-    # lógica por tipo
+    # aplicar corrección según tiempo
     if tiempo == "past":
-
         resultado, explicacion = corregir_pasado(mensaje)
-
-        # si no cambió nada → no encontró verbo
-        if resultado == mensaje:
-            return "Sentence in past detected.", None
 
     elif tiempo == "future":
         resultado, explicacion = corregir_futuro(mensaje)
@@ -89,20 +84,15 @@ def corregir_frase(mensaje):
     else:
         resultado, explicacion = corregir_presente(mensaje)
 
-    # formatear salida
+    # formatear
     resultado_formateado = formatear_frase(resultado)
     mensaje_formateado = formatear_frase(mensaje)
 
-    
+    # si no hubo cambios → devolver con explicación si existe
     if resultado_formateado == mensaje_formateado:
         return resultado_formateado, explicacion
 
-    if explicacion:
-        return resultado_formateado, explicacion
-
-    if resultado_formateado == mensaje_formateado:
-        return resultado_formateado, None
-
+    # si hubo cambios
     return resultado_formateado, explicacion
 
 # ruta principal de la aplicación
