@@ -49,6 +49,24 @@ def limpiar_historial(historial):
 historial = cargar_historial()
 
 # =========================
+# PROGRESO USUARIO
+# =========================
+
+ARCHIVO_PROGRESO = "progreso.json"
+
+# cargar progreso
+def cargar_progreso():
+    if os.path.exists(ARCHIVO_PROGRESO):
+        with open(ARCHIVO_PROGRESO, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+# guardar progreso
+def guardar_progreso(data):
+    with open(ARCHIVO_PROGRESO, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+# =========================
 # ESTADO ASSESSMENT
 # =========================
 
@@ -71,6 +89,9 @@ def home():
     # índice del ejercicio actual
     indice_ejercicio = session.get("indice_ejercicio", 0)
     
+    # índice del tema actual (para avanzar entre temas)
+    indice_tema = session.get("indice_tema", 0)
+    
     # obtiene modo actual de la app
     modo = session.get("modo", "normal")
     
@@ -80,6 +101,13 @@ def home():
 
     # obtiene el nivel guardado del usuario (si existe)
     nivel = session.get("nivel")
+    
+    # cargar progreso guardado
+    progreso = cargar_progreso()
+
+    if "usuario_demo" in progreso:
+        session["indice_tema"] = progreso["usuario_demo"].get("indice_tema", 0)
+        session["indice_ejercicio"] = progreso["usuario_demo"].get("indice_ejercicio", 0)
 
     # inicializa la variable explicacion para evitar errores si no hay POST
     explicacion = None
@@ -97,7 +125,12 @@ def home():
         temas = CURRICULO.get(subnivel, [])
 
         if temas:
-            tema_actual = temas[0]
+            # evita que el índice se salga del rango
+            if indice_tema >= len(temas):
+                indice_tema = 0
+
+            # selecciona el tema actual según el índice
+            tema_actual = temas[indice_tema]
 
             # ✔ la teoría NO cambia
             teoria = tema_actual["teoria"]
@@ -105,8 +138,17 @@ def home():
             # 🔥 nueva lógica de ejercicios
             lista_ejercicios = tema_actual["ejercicios"]
 
+            # si terminó todos los ejercicios del tema
             if indice_ejercicio >= len(lista_ejercicios):
-                indice_ejercicio = 0
+
+                # avanzar al siguiente tema
+                session["indice_tema"] = indice_tema + 1
+
+                # reiniciar ejercicios desde 0
+                session["indice_ejercicio"] = 0
+
+                # recargar para mostrar nuevo tema
+                return redirect("/")
 
             ejercicio_data = lista_ejercicios[indice_ejercicio]
 
@@ -139,6 +181,19 @@ def home():
 
                 # avanzar ejercicio
                 session["indice_ejercicio"] = indice_ejercicio + 1
+                
+                # cargar progreso actual
+                progreso = cargar_progreso()
+
+                # usamos "usuario_demo" temporal (luego será login)
+                progreso["usuario_demo"] = {
+                    "nivel": nivel,
+                    "indice_tema": session.get("indice_tema", 0),
+                    "indice_ejercicio": session.get("indice_ejercicio", 0)
+                }
+
+                # guardar en archivo
+                guardar_progreso(progreso)
 
                 return redirect("/")
             else:

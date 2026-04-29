@@ -1,12 +1,12 @@
 [
     "You: he eat",
     "Tutor: He eats.",
-    "You: he eat",
+    "You: he eats",
     "Tutor: He eats.",
-    "You: she go",
-    "Tutor: She goes.",
-    "You: she go",
-    "Tutor: She goes.",
-    "You: he eat",
-    "Tutor: He eats."
+    "You: Does he eat?",
+    "Tutor: Does he eat?.",
+    "You: does he eat?",
+    "Tutor: Does he eat?.",
+    "You: does he eat?",
+    "Tutor: Does he eat?."
 ]

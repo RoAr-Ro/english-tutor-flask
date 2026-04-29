@@ -39,6 +39,17 @@ CURRICULO = {
                 }
 
             ]
+        },
+        
+        {
+            "tema": "questions_basic",
+            "teoria": "Use 'does' for he/she/it questions. Example: Does he eat?",
+            "ejercicios": [
+                {
+                    "instruccion": "Write a question using 'he eat'",
+                    "respuesta_esperada": "does he eat"
+                }
+            ]
         }
 
     ]
