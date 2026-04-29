@@ -22,30 +22,41 @@ def corregir_frase(mensaje):
 
     # normalizar texto
     mensaje = mensaje.lower().strip()
-    
-        # separar palabras de la frase
-    palabras = mensaje.split()
 
-    # lista de sujetos válidos
-    SUJETOS = ["i", "you", "he", "she", "it", "we", "they"]
-
-    # validar estructura básica: sujeto + verbo
-    if len(palabras) < 2 or palabras[0] not in SUJETOS:
-        return formatear_frase(mensaje), "structure"
+    # ------------------------
+    # CASOS ESPECIALES
+    # ------------------------
 
     if mensaje == "":
-        return "Please write a sentence.", "system"
+        return "Please write a sentence.", None
 
     if mensaje == "hello":
-        return "Hello! How are you?", "system"
+        return "Hello! How are you?", None
 
     if mensaje == "i am fine":
-        return "Good sentence!", "system"
+        return "Good sentence!", None
 
-    # detectar tiempo
+    # ------------------------
+    # DETECTAR TIEMPO
+    # ------------------------
+
     tiempo = detectar_tiempo(mensaje)
 
-    # aplicar corrección según tiempo
+    palabras = mensaje.split()
+    SUJETOS = ["i", "you", "he", "she", "it", "we", "they"]
+
+    # caso especial: pasado sin estructura
+    if tiempo == "past" and (len(palabras) < 2 or palabras[0] not in SUJETOS):
+        return formatear_frase(mensaje), "Past detected but sentence structure is incorrect."
+
+    # validación normal
+    if len(palabras) < 2 or palabras[0] not in SUJETOS:
+        return formatear_frase(mensaje), None
+
+    # ------------------------
+    # CORRECCIÓN POR TIEMPO
+    # ------------------------
+
     if tiempo == "past":
         resultado, explicacion = corregir_pasado(mensaje)
 
@@ -55,15 +66,28 @@ def corregir_frase(mensaje):
     else:
         resultado, explicacion = corregir_presente(mensaje)
 
-    # formatear
+    # ------------------------
+    # FORMATEO
+    # ------------------------
+
     resultado_formateado = formatear_frase(resultado)
     mensaje_formateado = formatear_frase(mensaje)
 
-    # si no hubo cambios → devolver con explicación si existe
-    if resultado_formateado == mensaje_formateado:
-        return resultado_formateado, explicacion
+    # ------------------------
+    # SIN CAMBIOS
+    # ------------------------
 
-    # si hubo cambios
+    if resultado_formateado == mensaje_formateado:
+
+        if "will" in mensaje:
+            return resultado_formateado, "Already correct future."
+
+        return resultado_formateado, None
+
+    # ------------------------
+    # CON CAMBIOS
+    # ------------------------
+
     return resultado_formateado, explicacion
 
 
