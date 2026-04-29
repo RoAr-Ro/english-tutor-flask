@@ -1,16 +1,23 @@
-# venv\Scripts\python.exe app.py
-# importa Flask, render_template y request
 from verbos import VERBOS_IRREGULARES
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, session
 import json
 import os
 from grammar.detector import detectar_tiempo
 from grammar.past import corregir_pasado
 from grammar.present import corregir_presente
 from grammar.future import corregir_futuro
+from assessment import PREGUNTAS_NIVEL, evaluar_nivel
+from core import corregir_frase
+from tutor import obtener_ejercicio
+from curriculum import CURRICULO
+from flask import redirect
+from core import corregir_frase, evaluar_respuesta
 
-# crea la aplicación
+# crea la aplicación Flask
 app = Flask(__name__)
+
+# clave secreta necesaria para usar session (guardar datos del usuario)
+app.secret_key = "clave_secreta"
 
 # nombre archivo historial
 ARCHIVO = "historial.json"
@@ -41,78 +48,117 @@ def limpiar_historial(historial):
 # cargar historial si existe
 historial = cargar_historial()
 
-# función para mejorar presentación de frases
-def formatear_frase(texto):
+# =========================
+# ESTADO ASSESSMENT
+# =========================
 
-    # primera letra mayúscula
-    texto = texto.capitalize()
+respuestas_usuario = []
+indice_pregunta = 0
+modo_assessment = False
 
-    # agregar punto final si no existe
-    if not texto.endswith("."):
-        texto += "."
+# =========================
+# ESTADO TUTOR
+# =========================
 
-    return texto
+indice_ejercicio = 0
+modo_tutor = False
 
-
-# función principal que coordina todo
-def corregir_frase(mensaje):
-
-    # normalizar texto
-    mensaje = mensaje.lower().strip()
-
-    # caso vacío
-    if mensaje == "":
-        return "Please write a sentence.", None
-
-    # respuestas especiales
-    if mensaje == "hello":
-        return "Hello! How are you?", None
-
-    if mensaje == "i am fine":
-        return "Good sentence!", None
-
-    # detectar tiempo
-    tiempo = detectar_tiempo(mensaje)
-
-    # aplicar corrección según tiempo
-    if tiempo == "past":
-        resultado, explicacion = corregir_pasado(mensaje)
-
-    elif tiempo == "future":
-        resultado, explicacion = corregir_futuro(mensaje)
-
-    else:
-        resultado, explicacion = corregir_presente(mensaje)
-
-    # formatear
-    resultado_formateado = formatear_frase(resultado)
-    mensaje_formateado = formatear_frase(mensaje)
-
-    # si no hubo cambios → devolver con explicación si existe
-    if resultado_formateado == mensaje_formateado:
-        return resultado_formateado, explicacion
-
-    # si hubo cambios
-    return resultado_formateado, explicacion
 
 # ruta principal de la aplicación
 @app.route("/", methods=["GET", "POST"])
 def home():
+    
+    # índice del ejercicio actual
+    indice_ejercicio = session.get("indice_ejercicio", 0)
+    
+    # obtiene modo actual de la app
+    modo = session.get("modo", "normal")
+    
+    # obtiene si hubo acierto en la respuesta anterior
+    # pop lo usa una vez y lo borra automáticamente
+    acierto = session.pop("acierto", False)
+
+    # obtiene el nivel guardado del usuario (si existe)
+    nivel = session.get("nivel")
 
     # inicializa la variable explicacion para evitar errores si no hay POST
     explicacion = None
 
     # inicializa la respuesta vacía para evitar variable no definida
     respuesta = ""
+    
+    # variables del tutor
+    teoria = None
+    ejercicio = None
 
+    if modo == "tutor":
+
+        subnivel = "beginner_1"
+        temas = CURRICULO.get(subnivel, [])
+
+        if temas:
+            tema_actual = temas[0]
+
+            # ✔ la teoría NO cambia
+            teoria = tema_actual["teoria"]
+
+            # 🔥 nueva lógica de ejercicios
+            lista_ejercicios = tema_actual["ejercicios"]
+
+            if indice_ejercicio >= len(lista_ejercicios):
+                indice_ejercicio = 0
+
+            ejercicio_data = lista_ejercicios[indice_ejercicio]
+
+            ejercicio = ejercicio_data["instruccion"]
+    
+    
     # verifica si el usuario envió el formulario (método POST)
     if request.method == "POST":
 
         # obtiene el texto que el usuario escribió en el input llamado "mensaje"
         mensaje = request.form["mensaje"]
 
-        # llama a la función que corrige la frase y devuelve texto + explicación
-        respuesta, explicacion = corregir_frase(mensaje)
+        if modo == "tutor":
+
+            subnivel = "beginner_1"
+            temas = CURRICULO.get(subnivel, [])
+            tema_actual = temas[0]
+
+            # obtener respuesta esperada
+            respuesta_esperada = lista_ejercicios[indice_ejercicio]["respuesta_esperada"]
+
+            # evaluar
+            correcto, texto_corregido = evaluar_respuesta(mensaje, respuesta_esperada)
+
+            respuesta = texto_corregido
+
+            if correcto:
+                # guardar que acertó
+                session["acierto"] = True
+
+                # avanzar ejercicio
+                session["indice_ejercicio"] = indice_ejercicio + 1
+
+                return redirect("/")
+            else:
+                explicacion = f"❌ Try again. Expected: {respuesta_esperada}"
+
+        else:
+            # modo normal
+            respuesta, explicacion = corregir_frase(mensaje)
+        
+        # adapta el comportamiento según el nivel del usuario
+        if explicacion is None:
+
+            if nivel == "beginner":
+                explicacion = "Try simple sentences: I eat, She goes, I went."
+
+            elif nivel == "intermediate":
+                explicacion = "Good. Try adding more detail to your sentence."
+
+            elif nivel == "advanced":
+                explicacion = "Correct. Try using more complex grammar (perfect tenses, connectors)."
 
         # agrega al historial lo que escribió el usuario
         historial.append(f"You: {mensaje}")
@@ -131,7 +177,12 @@ def home():
         "index.html",
         respuesta=respuesta,
         explicacion=explicacion,
-        historial=historial
+        historial=historial,
+        nivel=nivel,
+        modo=modo,
+        teoria=teoria,
+        ejercicio=ejercicio,
+        acierto=acierto
     )
 
 
@@ -161,6 +212,114 @@ def api_corregir():
         "explicacion": explicacion
     }
 
+
+@app.route("/assessment")
+def iniciar_assessment():
+    global respuestas_usuario, indice_pregunta, modo_assessment
+
+    respuestas_usuario = []
+    indice_pregunta = 0
+    modo_assessment = True
+
+    return render_template(
+        "assessment.html",
+        pregunta=PREGUNTAS_NIVEL[indice_pregunta]
+    )
+
+
+@app.route("/assessment/responder", methods=["POST"])
+def responder_assessment():
+    global respuestas_usuario, indice_pregunta, modo_assessment
+
+    # obtiene respuesta del usuario
+    respuesta = request.form["mensaje"]
+
+    # guarda respuesta
+    respuestas_usuario.append(respuesta)
+
+    # avanza a siguiente pregunta
+    indice_pregunta += 1
+
+    # si aún hay preguntas
+    if indice_pregunta < len(PREGUNTAS_NIVEL):
+        return render_template(
+            "assessment.html",
+            pregunta=PREGUNTAS_NIVEL[indice_pregunta]
+        )
+
+    # si terminó el assessment
+    nivel = evaluar_nivel(respuestas_usuario)
+
+    # guarda el nivel del usuario en la sesión
+    session["nivel"] = nivel
+
+    # desactiva modo assessment
+    modo_assessment = False
+
+    # activar modo tutor
+    session["modo"] = "tutor"
+
+    # redirigir a home (misma página principal)
+    return redirect("/")
+    
+
+# ruta para iniciar tutor guiado
+@app.route("/tutor")
+def iniciar_tutor():
+    
+    # DEBUG: ver qué está cargando realmente
+    print(CURRICULO)
+
+    # obtiene nivel del usuario (por defecto beginner)
+    nivel = session.get("nivel", "beginner")
+
+    # por ahora siempre usamos beginner_1 (luego lo haremos dinámico)
+    subnivel = "beginner_1"
+
+    # obtiene lista de temas del currículo
+    temas = CURRICULO.get(subnivel, [])
+
+    # tomar primer tema
+    if not temas:
+        return "No curriculum found. Check curriculum.py"
+
+    tema_actual = temas[0]
+
+    # obtener teoría del tema
+    teoria = tema_actual["teoria"]
+
+    # obtener primer ejercicio
+    ejercicio = tema_actual["ejercicios"][0]["instruccion"]
+
+    # renderizar template del tutor
+    return render_template(
+        "tutor.html",
+        teoria=teoria,
+        ejercicio=ejercicio
+    )
+    
+    
+@app.route("/tutor/responder", methods=["POST"])
+def responder_tutor():
+    global indice_ejercicio, modo_tutor
+
+    nivel = session.get("nivel", "beginner")
+
+    respuesta_usuario = request.form["mensaje"]
+
+    # corregir respuesta
+    texto, explicacion = corregir_frase(respuesta_usuario)
+
+    indice_ejercicio += 1
+
+    siguiente = obtener_ejercicio(nivel, indice_ejercicio)
+
+    return render_template(
+        "tutor.html",
+        ejercicio=siguiente,
+        respuesta=texto,
+        explicacion=explicacion
+    )
 
 # ejecutar servidor
 if __name__ == "__main__":

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tutor</title>
+</head>
+<body>
+
+    <h2>Tutor Mode</h2>
+
+    <!-- teoría -->
+    {% if teoria %}
+        <p style="background:#eef6ff; padding:10px; border-radius:8px;">
+            📘 {{ teoria }}
+        </p>
+    {% endif %}
+
+    <!-- ejercicio -->
+    {% if ejercicio %}
+        <p><strong>{{ ejercicio }}</strong></p>
+
+        <form method="POST" action="/tutor/responder">
+            <input type="text" name="mensaje" required autofocus>
+            <button type="submit">Send</button>
+        </form>
+    {% endif %}
+
+</body>
+</html>

@@ -47,6 +47,7 @@
             border: 1px solid #ccc;
             border-radius: 8px;
             font-size: 16px;
+            outline: none;
         }
 
         button {
@@ -100,6 +101,21 @@
         <em>"I go yesterday"</em>, <em>"She eat"</em>, <em>"I travel tomorrow"</em>
         </p>
 
+        <!-- muestra el nivel del usuario si ya hizo el test -->
+        {% if nivel %}
+        <p style="text-align: center; font-weight: bold; color: #16a34a;">
+        Your level: {{ nivel }}
+        </p>
+        {% endif %}
+
+        <div style="text-align: center; margin: 10px 0 15px 0;">
+            <a href="/assessment">
+                <button style="background: #16a34a;">
+                    Start Level Test
+                </button>
+            </a>
+        </div>
+
         <form method="POST">
 
             <input
@@ -114,19 +130,80 @@
 
         </form>
 
+        {% if modo == "tutor" %}
+
+            <div style="margin-bottom:20px; text-align:center;">
+
+                <p style="background:#eef6ff; padding:10px; border-radius:8px;">
+                    📘 {{ teoria }}
+                </p>
+
+                <p><strong>{{ ejercicio }}</strong></p>
+
+            </div>
+
+        {% endif %}
+
         {% if respuesta %}
-            <div class="respuesta">
-                <strong>Corrected:</strong> {{ respuesta }}
-            </div>
+        <div style="margin-top: 20px; text-align: center;">
+
+            {% if modo == "tutor" %}
+
+                <p style="font-size: 18px;">
+                    {{ respuesta }}
+                </p>
+
+                {% if acierto %}
+                    <!-- ✅ si acertó -->
+                    <p style="color: green; font-weight: bold;">
+                        ✅ Correct!
+                    </p>
+                {% else %}
+                    <!-- ❌ si falló -->
+                    <p style="font-size: 14px;">
+                        {{ explicacion }}
+                    </p>
+                {% endif %}
+
+
+            {% else %}
+                <!-- 🧠 MODO NORMAL -->
+
+                {% if explicacion == "structure" %}
+                    <p style="font-size: 18px; color: #dc2626;">
+                        {{ respuesta }}
+                    </p>
+                    <p style="font-size: 14px; color: #dc2626;">
+                        ⚠️ Please start your sentence with a subject (I, you, he, she...)
+                    </p>
+
+                {% elif explicacion and explicacion != "system" %}
+                    <p style="font-size: 20px; font-weight: bold; color: #1e3a8a;">
+                        Correction: {{ respuesta }}
+                    </p>
+
+                    <p style="font-size: 14px; color: #6b7280;">
+                        💡 {{ explicacion }}
+                    </p>
+
+                {% elif explicacion == "system" %}
+                    <p style="font-size: 18px;">
+                        {{ respuesta }}
+                    </p>
+
+                {% else %}
+                    <p style="font-size: 18px;">
+                        Your sentence: {{ respuesta }}
+                    </p>
+                {% endif %}
+
+            {% endif %}
+
+
+        </div>
         {% endif %}
 
-        {% if explicacion %}
-            <div class="respuesta">
-                <strong>Explanation:</strong> {{ explicacion }}
-            </div>
-        {% endif %}
-
-        <h2>Chat History</h2>
+        <h2 style="margin-top: 30px;">Chat History</h2>
 
         {% for linea in historial %}
 

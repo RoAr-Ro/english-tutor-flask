@@ -1,5 +1,7 @@
 from verbos import VERBOS_IRREGULARES
 
+SUJETOS = ["i", "you", "he", "she", "it", "we", "they"]
+
 # función para conjugar verbo regular en pasado
 def pasado_regular(verbo):
 
@@ -26,6 +28,10 @@ def corregir_pasado(mensaje):
     nueva_frase = []
     explicacion = None
     cambio = False
+    
+    # validar estructura básica: sujeto + verbo
+    if len(palabras) < 2 or palabras[0] not in SUJETOS:
+        return mensaje, "Se detectó pasado, pero no se identificó un verbo claro."
 
     for i, palabra in enumerate(palabras):
 
