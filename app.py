@@ -1,5 +1,5 @@
 from verbos import VERBOS_IRREGULARES
-from flask import Flask, request, render_template, session
+from flask import Flask, request, render_template, session, redirect
 import json
 import os
 from grammar.detector import detectar_tiempo
@@ -7,11 +7,10 @@ from grammar.past import corregir_pasado
 from grammar.present import corregir_presente
 from grammar.future import corregir_futuro
 from assessment import PREGUNTAS_NIVEL, evaluar_nivel
-from core import corregir_frase
 from tutor import obtener_ejercicio
 from curriculum import CURRICULO
-from flask import redirect
 from core import corregir_frase, evaluar_respuesta
+from assessment import guardar_log_assessment
 
 # crea la aplicación Flask
 app = Flask(__name__)
@@ -66,25 +65,29 @@ def guardar_progreso(data):
     with open(ARCHIVO_PROGRESO, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
-# =========================
-# ESTADO ASSESSMENT
-# =========================
-
-respuestas_usuario = []
-indice_pregunta = 0
-modo_assessment = False
-
-# =========================
-# ESTADO TUTOR
-# =========================
-
-indice_ejercicio = 0
-modo_tutor = False
-
 
 # ruta principal de la aplicación
 @app.route("/", methods=["GET", "POST"])
 def home():
+    
+    # ------------------------
+    # INICIALIZAR ESTADO EN SESSION
+    # ------------------------
+
+    # índice de ejercicios del tutor
+    session.setdefault("indice_ejercicio", 0)
+
+    # índice de tema del tutor
+    session.setdefault("indice_tema", 0)
+
+    # modo actual (normal / tutor)
+    session.setdefault("modo", "normal")
+
+    # respuestas del assessment
+    session.setdefault("respuestas", [])
+
+    # índice de pregunta del assessment
+    session.setdefault("indice_pregunta", 0)
     
     # índice del ejercicio actual
     indice_ejercicio = session.get("indice_ejercicio", 0)
@@ -102,12 +105,13 @@ def home():
     # obtiene el nivel guardado del usuario (si existe)
     nivel = session.get("nivel")
     
-    # cargar progreso guardado
     progreso = cargar_progreso()
 
+    # solo cargar si la sesión aún no tiene progreso
     if "usuario_demo" in progreso:
-        session["indice_tema"] = progreso["usuario_demo"].get("indice_tema", 0)
-        session["indice_ejercicio"] = progreso["usuario_demo"].get("indice_ejercicio", 0)
+        if "indice_tema" not in session or "indice_ejercicio" not in session:
+            session["indice_tema"] = progreso["usuario_demo"].get("indice_tema", 0)
+            session["indice_ejercicio"] = progreso["usuario_demo"].get("indice_ejercicio", 0)
 
     # inicializa la variable explicacion para evitar errores si no hay POST
     explicacion = None
@@ -165,7 +169,17 @@ def home():
 
             subnivel = "beginner_1"
             temas = CURRICULO.get(subnivel, [])
-            tema_actual = temas[0]
+            if indice_tema >= len(temas):
+                indice_tema = 0
+
+            tema_actual = temas[indice_tema]
+            
+            # 🔥 RECONSTRUIR ejercicios (importante)
+            lista_ejercicios = tema_actual["ejercicios"]
+            
+            # 🔥 FIX 4 — proteger índice
+            if indice_ejercicio >= len(lista_ejercicios):
+                indice_ejercicio = 0
 
             # obtener respuesta esperada
             respuesta_esperada = lista_ejercicios[indice_ejercicio]["respuesta_esperada"]
@@ -270,51 +284,60 @@ def api_corregir():
 
 @app.route("/assessment")
 def iniciar_assessment():
-    global respuestas_usuario, indice_pregunta, modo_assessment
 
-    respuestas_usuario = []
-    indice_pregunta = 0
-    modo_assessment = True
+    # reiniciar assessment en session
+    session["respuestas"] = []
+    session["indice_pregunta"] = 0
+    session["modo"] = "assessment"
 
     return render_template(
         "assessment.html",
-        pregunta=PREGUNTAS_NIVEL[indice_pregunta]
+        pregunta=PREGUNTAS_NIVEL[0]  # 🔥 empieza desde 0
     )
 
 
 @app.route("/assessment/responder", methods=["POST"])
 def responder_assessment():
-    global respuestas_usuario, indice_pregunta, modo_assessment
 
-    # obtiene respuesta del usuario
     respuesta = request.form["mensaje"]
 
-    # guarda respuesta
-    respuestas_usuario.append(respuesta)
+    # obtener estado actual
+    respuestas = session.get("respuestas", [])
+    indice = session.get("indice_pregunta", 0)
 
-    # avanza a siguiente pregunta
-    indice_pregunta += 1
+    # guardar respuesta
+    respuestas.append(respuesta)
+    session["respuestas"] = respuestas
 
-    # si aún hay preguntas
-    if indice_pregunta < len(PREGUNTAS_NIVEL):
+    # avanzar índice
+    indice += 1
+    session["indice_pregunta"] = indice
+
+    # ------------------------
+    # SIGUIENTE PREGUNTA
+    # ------------------------
+
+    if indice < len(PREGUNTAS_NIVEL):
         return render_template(
             "assessment.html",
-            pregunta=PREGUNTAS_NIVEL[indice_pregunta]
+            pregunta=PREGUNTAS_NIVEL[indice]  # 🔥 usar indice correcto
         )
 
-    # si terminó el assessment
-    nivel = evaluar_nivel(respuestas_usuario)
+    # ------------------------
+    # FIN DEL ASSESSMENT
+    # ------------------------
 
-    # guarda el nivel del usuario en la sesión
+    nivel = evaluar_nivel(respuestas)
+
+    # guardar log correctamente
+    guardar_log_assessment(PREGUNTAS_NIVEL, respuestas, nivel)
+
+    # guardar nivel
     session["nivel"] = nivel
-
-    # desactiva modo assessment
-    modo_assessment = False
 
     # activar modo tutor
     session["modo"] = "tutor"
 
-    # redirigir a home (misma página principal)
     return redirect("/")
     
 
@@ -375,6 +398,18 @@ def responder_tutor():
         respuesta=texto,
         explicacion=explicacion
     )
+    
+@app.route("/reset_logs")
+def reset_logs():
+
+    # solo permitir en debug (desarrollo)
+    if not app.debug:
+        return "Not allowed", 403
+
+    with open("assessment_log.json", "w", encoding="utf-8") as f:
+        f.write("[]")
+
+    return "Logs cleared"
 
 # ejecutar servidor
 if __name__ == "__main__":

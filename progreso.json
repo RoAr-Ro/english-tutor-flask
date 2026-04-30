@@ -1,7 +1,7 @@
 {
     "usuario_demo": {
-        "nivel": "beginner",
-        "indice_tema": 1,
-        "indice_ejercicio": 1
+        "nivel": "advanced",
+        "indice_tema": 0,
+        "indice_ejercicio": 2
     }
 }

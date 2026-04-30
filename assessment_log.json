@@ -1,0 +1,41 @@
+[
+    {
+        "preguntas": [
+            "Write a sentence in past using 'go'.",
+            "Write a sentence in present using 'she'.",
+            "Write a sentence in future using 'go'."
+        ],
+        "respuestas": [
+            "   ",
+            "   ",
+            "   "
+        ],
+        "nivel": "beginner"
+    },
+    {
+        "preguntas": [
+            "Write a sentence in past using 'go'.",
+            "Write a sentence in present using 'she'.",
+            "Write a sentence in future using 'go'."
+        ],
+        "respuestas": [
+            "she went",
+            "she goes",
+            "she will go"
+        ],
+        "nivel": "advanced"
+    },
+    {
+        "preguntas": [
+            "Write a sentence in past using 'go'.",
+            "Write a sentence in present using 'she'.",
+            "Write a sentence in future using 'go'."
+        ],
+        "respuestas": [
+            "she went",
+            "she goes",
+            "she will go tomorrow"
+        ],
+        "nivel": "advanced"
+    }
+]
